@@ -2,17 +2,26 @@ import platform
 import winreg
 from selenium import webdriver
 supported_os = ['windows', 'ubuntu']
-[]
-supported_browsers = { 'windows' : {"chrome.exe":"", "iexplore.exe":"", "safari":""} ,
-                       'ubuntu'   : {"chrome":"", "safari":""}
+supported_browsers = { 'windows' : {"chrome.exe":"", "iexplore.exe":"", "microsoftedge.exe":""} ,
+                       'ubuntu'   : {"chrome":"", "firefox":""}
+                     }
+supported_webdrivers = { 'windows' : {
+                                        "chrome.exe": None,
+                                        "iexplore.exe": None,
+                                        "microsoftedge.exe": None
+
+
+                                     } ,
+                       'ubuntu'    : { "chrome" : webdriver.Chrome,
+                                       "firefox": webdriver.Firefox
+                                      }
                      }
 def get_os():
     return str.lower(platform.system())
-def get_browsers(operating_system):
+def get_all_browsers(operating_system):
     if operating_system == 'windows':
         apps = 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths'
         windows_browsers = supported_browsers['windows']
-        print(windows_browsers)
         access_registry = winreg.ConnectRegistry(None,winreg.HKEY_LOCAL_MACHINE)
         access_key = winreg.OpenKey(access_registry, apps)
         acess_key_count = winreg.QueryInfoKey(access_key)[0]
@@ -21,33 +30,51 @@ def get_browsers(operating_system):
         for n in range(acess_key_count):
             try:
                 browser = str.lower(winreg.EnumKey(access_key, n))
+                print(browser)
                 if browser in windows_browsers.keys():
                     app_path = apps+str("\\")+browser
-                    print(app_path)
                     handle = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, app_path)
                     num_values = winreg.QueryInfoKey(handle)[1]
                     for i in range(num_values):
-                        windows_browsers[browser] = winreg.EnumValue(handle, i)
+                        paths = winreg.EnumValue(handle, i)
+                        windows_browsers[browser] = paths[1]
+
             except:
                 break
+    return windows_browsers
 
-    print(windows_browsers)
-    return None
+def get_browser_path(os_name, browser_name):
+    all_browsers = get_all_browsers(os_name)
+    print(all_browsers)
+    if browser_name in all_browsers.keys():
+            return str(all_browsers[browser_name] + "\\" + browser_name)
+    else:
+        print("error unsupported browser")
+        return None
+def get_web_driver(os_name, browser_name, browser_path):
+    if os_name == 'windows':
+        if browser_name == 'chrome.exe':
+            supported_webdrivers[os_name][browser_name] = webdriver.Chrome(browser_path)
+        elif browser_name == 'iexplore.exe':
+            supported_webdrivers[os_name][browser_name] = webdriver.Ie(browser_path)
+        elif browser_name == 'microsoftedge.exe':
+            supported_webdrivers[os_name][browser_name] = webdriver.Edge(browser_path)
+        return supported_webdrivers[os_name][browser_name]
 
-
-def main(browser, url):
+def main(browser_name, url):
     print(supported_browsers)
     os_name = get_os()
     if os_name not in supported_os:
             print("unsupported os")
-    else:
-        browsers_and_paths = get_browsers(os_name)
+            return None
+    browser_path = get_browser_path(os_name, browser_name)
+    if browser_path == None:
+        print("browser: ",browser," not found")
+        return None
+    driver = get_web_driver(os_name, browser_name, browser_path)
+    driver.get(url)
+
+
 
 if __name__ == '__main__':
-    main("chrome", 'https://www.linkedin.com')
-browsers = {}
-{
-
-"edge":"C:\Program Files (x86)\Google\Chrome\Application",
-"chrome": "C:\Windows\SystemApps\Microsoft.MicrosoftEuuudge_8wekyb3d8bbwe"
-}
+    main("chrome.exe", 'https://www.linkedin.com')
