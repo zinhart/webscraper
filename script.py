@@ -4,7 +4,9 @@ import sys
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import csv
 import defs
+
 
 def get_os():
     return str.lower(platform.system())
@@ -81,9 +83,25 @@ def get_saved_jobs():
     if defs.logged_in is True:
         print("getting saved jobs")
         defs.webdriver.get("https://www.linkedin.com/jobs/tracker/saved/")
-#                defs.webdriver.find_element_by_xpath('//span[text()="Saved Jobs"]').click()
-        position_title = defs.webdriver.find_element_by_xpath('//a[@class=jobs-job-car-content__title ember-view]/')
-        print (position_title)
+        position_titles = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='jobs-job-card-content__title ember-view'] ")
+        companies_names = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='t-black jobs-job-card-content__company-name t-14 t-normal ember-view']")
+        job_location = defs.webdriver.find_elements_by_xpath("//*[@class='t-12 t-black--light']")
+        bullets = defs.webdriver.find_elements_by_xpath("//*[@class='jobs-job-card-content__bullet']")
+        rows = []
+        rows.append(['positions', 'companies', 'job locations', 'date posted', 'applicants', 'applied', 'date application sent', 'result', 'date received' ])
+        for (pt, cn, jl) in zip(position_titles, companies_names, job_location):
+            rows.append([pt.text, cn.text, jl.text, '', '', '', '', '', ''])
+        temp = []
+        for (b1, b2) in zip(bullets[0::2], bullets[1::2]):
+            temp.append((b1.text, b2.text))
+        for i in range(1, len(temp)): # first row is the column labels
+            rows[i][3] = temp[i-1][0] # i-1 to match up temp and rows
+            rows[i][4] = temp[i-1][1]
+        for row in rows:
+            print(row)
+
+
+
 def get_applied_jobs():
     pass
 def main():

@@ -15,3 +15,4 @@ supported_webdrivers = { 'windows' : {
                      }
 logged_in = False
 webdriver = None
+csv_writer = None
