@@ -3,27 +3,15 @@ import winreg
 import sys
 from time import sleep
 from selenium import webdriver
-supported_os = ['windows', 'ubuntu']
-supported_browsers = { 'windows' : {"chrome.exe":"", "iexplore.exe":"", "microsoftedge.exe":""} ,
-                       'ubuntu'   : {"chrome":"", "firefox":""}
-                     }
-supported_webdrivers = { 'windows' : {
-                                        "chrome.exe": None,
-                                        "iexplore.exe": None,
-                                        "microsoftedge.exe": None
+from selenium.webdriver.common.by import By
+import defs
 
-
-                                     } ,
-                       'ubuntu'    : { "chrome" : webdriver.Chrome,
-                                       "firefox": webdriver.Firefox
-                                      }
-                     }
 def get_os():
     return str.lower(platform.system())
 def get_all_browsers(operating_system):
     if operating_system == 'windows':
         apps = 'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths'
-        windows_browsers = supported_browsers['windows']
+        windows_browsers = defs.supported_browsers['windows']
         access_registry = winreg.ConnectRegistry(None,winreg.HKEY_LOCAL_MACHINE)
         access_key = winreg.OpenKey(access_registry, apps)
         acess_key_count = winreg.QueryInfoKey(access_key)[0]
@@ -54,46 +42,65 @@ def get_browser_path(os_name, browser_name):
 def get_web_driver(os_name, browser_name):
     if os_name == 'windows':
         if browser_name == 'chrome.exe':
-            supported_webdrivers[os_name][browser_name] = webdriver.Chrome()
+            defs.supported_webdrivers[os_name][browser_name] = webdriver.Chrome()
         elif browser_name == 'iexplore.exe':
-            supported_webdrivers[os_name][browser_name] = webdriver.Ie()
+            defs.supported_webdrivers[os_name][browser_name] = webdriver.Ie()
         elif browser_name == 'microsoftedge.exe':
-            supported_webdrivers[os_name][browser_name] = webdriver.Edge()
-        return supported_webdrivers[os_name][browser_name]
+            defs.supported_webdrivers[os_name][browser_name] = webdriver.Edge()
+        return defs.supported_webdrivers[os_name][browser_name]
 
-def main(browser_name, url, usr, pw):
+def login(browser_name, url, usr, pw):
     os_name = get_os()
-    if os_name not in supported_os:
+    if os_name not in defs.supported_os:
             print("unsupported os")
-            return None
+            return False
     browser_path = get_browser_path(os_name, browser_name)
     if browser_path == None:
         print("browser: ",browser," not found")
-        return None
+        return False
     driver = get_web_driver(os_name, browser_name)
     driver.get(url)
     username = driver.find_element_by_id("username")
     password = driver.find_element_by_id("password")
     username.send_keys(usr)
-    sleep(0.5)
     password.send_keys(pw)
-    sleep(0.5)
-
-#    sign_in_button = driver.find_element_by_class_name('signin')
-    sign_in_button = driver.find_element_by_xpath('//*[@type="submit"]')
+    sleep(0.75)
+    # xpath from chropath
+    sign_in_button = driver.find_element_by_xpath('//button[@type="submit"]')
     sign_in_button.click()
+    defs.webdriver = driver
 
+    return True
 
+def go_to_my_jobs():
+    if defs.logged_in is True:
+        print("going to my jobs")
+        defs.webdriver.find_element_by_xpath('//a[@href="/jobs/"]').click()
 
-if __name__ == '__main__':
-    '''
+def get_saved_jobs():
+    if defs.logged_in is True:
+        print("getting saved jobs")
+        defs.webdriver.get("https://www.linkedin.com/jobs/tracker/saved/")
+#                defs.webdriver.find_element_by_xpath('//span[text()="Saved Jobs"]').click()
+        position_title = defs.webdriver.find_element_by_xpath('//a[@class=jobs-job-car-content__title ember-view]/')
+        print (position_title)
+def get_applied_jobs():
+    pass
+def main():
     if len(sys.argv) != 5:
         print("error")
         exit()
-    '''
     browser_name = sys.argv[1]
     url = sys.argv[2]
     usr = sys.argv[3]
     pw  = sys.argv[4]
     print(browser_name, url, usr, pw)
-    main("chrome.exe", 'https://www.linkedin.com/login', usr, pw)
+    defs.logged_in  = login(browser_name, url, usr, pw)
+    go_to_my_jobs();
+    get_saved_jobs();
+    #get_applied_jobs();
+
+
+
+if __name__ == '__main__':
+    main()
