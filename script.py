@@ -83,24 +83,28 @@ def get_saved_jobs():
     if defs.logged_in is True:
         print("getting saved jobs")
         defs.webdriver.get("https://www.linkedin.com/jobs/tracker/saved/")
-        position_titles = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='jobs-job-card-content__title ember-view'] ")
-        companies_names = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='t-black jobs-job-card-content__company-name t-14 t-normal ember-view']")
-        job_location = defs.webdriver.find_elements_by_xpath("//*[@class='t-12 t-black--light']")
-        bullets = defs.webdriver.find_elements_by_xpath("//*[@class='jobs-job-card-content__bullet']")
         rows = []
-        rows.append(['positions', 'companies', 'job locations', 'date posted', 'applicants', 'applied', 'date application sent', 'result', 'date received' ])
-        for (pt, cn, jl) in zip(position_titles, companies_names, job_location):
-            rows.append([pt.text, cn.text, jl.text, '', '', '', '', '', ''])
-        temp = []
-        for (b1, b2) in zip(bullets[0::2], bullets[1::2]):
-            temp.append((b1.text, b2.text))
-        for i in range(1, len(temp)): # first row is the column labels
-            rows[i][3] = temp[i-1][0] # i-1 to match up temp and rows
-            rows[i][4] = temp[i-1][1]
-        for row in rows:
-            print(row)
-
-
+        rows.append(['positions', 'companies', 'job locations', 'days old/current # of applicants', 'applied', 'date application sent', 'result', 'date received' ])
+        scroll_pause_time = 2.0
+        # Get scroll height
+        last_height = defs.webdriver.execute_script("return document.body.scrollHeight")
+        while True:
+            position_titles = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='jobs-job-card-content__title ember-view'] ")
+            companies_names = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='t-black jobs-job-card-content__company-name t-14 t-normal ember-view']")
+            job_location = defs.webdriver.find_elements_by_xpath("//*[@class='t-12 t-black--light']")
+            bullets = defs.webdriver.find_elements_by_xpath("//*[@class='jobs-job-card-content__info t-12 t-black--light mt2 pt3']")
+            for (pt, cn, jl, bl) in zip(position_titles, companies_names, job_location, bullets):
+                rows.append([pt.text, cn.text, jl.text, bl.text, '', '', '', ''])
+            # Scroll down to bottom
+            defs.webdriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            # Wait to load page
+            sleep(scroll_pause_time)
+            # Calculate new scroll height and compare with last scroll height
+            new_height = defs.webdriver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        return rows
 
 def get_applied_jobs():
     pass
@@ -115,7 +119,8 @@ def main():
     print(browser_name, url, usr, pw)
     defs.logged_in  = login(browser_name, url, usr, pw)
     go_to_my_jobs();
-    get_saved_jobs();
+    saved_jobs = get_saved_jobs();
+    print(saved_jobs)
     #get_applied_jobs();
 
 
