@@ -3,7 +3,7 @@ import winreg
 import sys
 from time import sleep
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from openpyxl import Workbook
 import csv
 import defs
 
@@ -139,12 +139,34 @@ def main():
     pw  = sys.argv[4]
     print(browser_name, url, usr, pw)
     defs.logged_in  = login(browser_name, url, usr, pw)
-    go_to_my_jobs();
-    saved_jobs = get_saved_jobs();
+    go_to_my_jobs()
+    saved_jobs = get_saved_jobs()
     print(saved_jobs)
     print("===========================================================")
     applied_jobs = get_applied_jobs();
     print(applied_jobs)
+
+    # check which jobs were applied to
+    for ajob in applied_jobs:
+        string = ajob[0] + ajob[1] +ajob[2]
+        for sjob in saved_jobs:
+            if string == str(sjob[0] + sjob[1] + sjob[2]):
+                print("job applied: ", ajob[0])
+
+    workbook = Workbook()
+    sheet = workbook.active
+    for i in range(0,len(saved_jobs)):
+        for j in range(0, len(saved_jobs[0])):
+            sheetidx = i + 1
+            sheetidy = j + 1
+            cell = sheet.cell(sheetidx, sheetidy)
+            cell.value = saved_jobs[i][j]
+    workbook.save(filename="job_search_data.xlsx")
+    #defs.csv_writer = csv.writer(open("job_data.csv", 'w'))
+    #defs.csv_writer.writerows(saved_jobs)
+def create_excel_workbook(sheetname, data):
+    workbook = Workbook()
+    sheet = workbook.active
 
 
 
