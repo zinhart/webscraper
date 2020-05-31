@@ -146,29 +146,43 @@ def main():
     applied_jobs = get_applied_jobs();
     print(applied_jobs)
 
+    '''
     # check which jobs were applied to
     for ajob in applied_jobs:
         string = ajob[0] + ajob[1] +ajob[2]
         for sjob in saved_jobs:
             if string == str(sjob[0] + sjob[1] + sjob[2]):
                 print("job applied: ", ajob[0])
-
-    workbook = Workbook()
-    sheet = workbook.active
-    for i in range(0,len(saved_jobs)):
-        for j in range(0, len(saved_jobs[0])):
-            sheetidx = i + 1
-            sheetidy = j + 1
-            cell = sheet.cell(sheetidx, sheetidy)
-            cell.value = saved_jobs[i][j]
-    workbook.save(filename="job_search_data.xlsx")
+    '''
+    create_excel_workbook("job_search_data.xlsx", saved_jobs)
     #defs.csv_writer = csv.writer(open("job_data.csv", 'w'))
     #defs.csv_writer.writerows(saved_jobs)
 def create_excel_workbook(sheetname, data):
     workbook = Workbook()
-    sheet = workbook.active
+    worksheet = workbook.active
+    for i in range(0,len(data)):
+        for j in range(0, len(data[0])):
+            sheetidx = i + 1
+            sheetidy = j + 1
+            cell = worksheet.cell(sheetidx, sheetidy)
+            cell.value = data[i][j]
+    '''
+    max_col = [0]* len(saved_jobs)
+    for i in range(0,len(saved_jobs)):
+        for j in range(0, len(saved_jobs[0])):
+            if max_col[i] < len(saved_jobs[j]):
+                max_col[i] = len(saved_jobs[j])
+    '''
+    # make columns length of max field
+    for column_cells in worksheet.columns:
+        length = max(len(as_text(cell.value)) for cell in column_cells)
+        print(length)
+        worksheet.column_dimensions[column_cells[0].column_letter].width = length
+    workbook.save(filename="job_search_data.xlsx")
 
-
-
+def as_text(value):
+    if value is None:
+        return ""
+    return str(value)
 if __name__ == '__main__':
     main()
