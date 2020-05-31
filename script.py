@@ -107,7 +107,28 @@ def get_saved_jobs():
         return rows
 
 def get_applied_jobs():
-    pass
+        defs.webdriver.get("https://www.linkedin.com/jobs/tracker/applied/")
+        rows = []
+        rows.append(['positions', 'companies', 'job locations'])
+        scroll_pause_time = 2.0
+        # Get scroll height
+        last_height = defs.webdriver.execute_script("return document.body.scrollHeight")
+        while True:
+            position_titles = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='jobs-job-card-content__title ember-view'] ")
+            companies_names = defs.webdriver.find_elements_by_xpath("//*[starts-with(@id, 'ember') and @class='t-black jobs-job-card-content__company-name t-14 t-normal ember-view']")
+            job_location = defs.webdriver.find_elements_by_xpath("//*[@class='t-12 t-black--light']")
+            for (pt, cn, jl) in zip(position_titles, companies_names, job_location):
+                rows.append([pt.text, cn.text, jl.text])
+            # Scroll down to bottom
+            defs.webdriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            # Wait to load page
+            sleep(scroll_pause_time)
+            # Calculate new scroll height and compare with last scroll height
+            new_height = defs.webdriver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        return rows
 def main():
     if len(sys.argv) != 5:
         print("error")
@@ -121,7 +142,9 @@ def main():
     go_to_my_jobs();
     saved_jobs = get_saved_jobs();
     print(saved_jobs)
-    #get_applied_jobs();
+    print("===========================================================")
+    applied_jobs = get_applied_jobs();
+    print(applied_jobs)
 
 
 
