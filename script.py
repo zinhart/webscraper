@@ -1,10 +1,11 @@
 import platform
 import winreg
 import sys
+import os
 from time import sleep
 from selenium import webdriver
-from openpyxl import Workbook
-import csv
+from openpyxl import Workbook, load_workbook
+import datetime
 import defs
 
 
@@ -83,8 +84,15 @@ def get_saved_jobs():
     if defs.logged_in is True:
         print("getting saved jobs")
         defs.webdriver.get("https://www.linkedin.com/jobs/tracker/saved/")
-        rows = []
-        rows.append(['positions', 'companies', 'job locations', 'days old/current # of applicants', 'applied', 'date application sent', 'result', 'date received' ])
+        rows = {'positions': [None],
+                'companies': [None],
+                'job locations': [None],
+                'days old/current # of applicants': [None],
+                'applied': [None],
+                'date application sent': [None],
+                'result': [None],
+                'date received': [None]
+               }
         scroll_pause_time = 2.0
         # Get scroll height
         last_height = defs.webdriver.execute_script("return document.body.scrollHeight")
@@ -94,7 +102,14 @@ def get_saved_jobs():
             job_location = defs.webdriver.find_elements_by_xpath("//*[@class='t-12 t-black--light']")
             bullets = defs.webdriver.find_elements_by_xpath("//*[@class='jobs-job-card-content__info t-12 t-black--light mt2 pt3']")
             for (pt, cn, jl, bl) in zip(position_titles, companies_names, job_location, bullets):
-                rows.append([pt.text, cn.text, jl.text, bl.text, '', '', '', ''])
+                rows['positions'].append(pt.text)
+                rows['companies'].append(cn.text)
+                rows['job locations'].append(jl.text)
+                rows['days old/current # of applicants'].append(bl.text)
+                rows['applied'].append('N')
+                rows['date application sent'].append("")
+                rows['result'].append("")
+                rows['date received'].append("")
             # Scroll down to bottom
             defs.webdriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             # Wait to load page
@@ -129,6 +144,46 @@ def get_applied_jobs():
                 break
             last_height = new_height
         return rows
+
+
+
+def generate_final_report(saved_jobs, applied_jobs):
+    print("in generate final report")
+    for i in  range(1, len(applied_jobs)):
+        for j in range(1, len(saved_jobs)):
+            if applied_jobs[i][0] == saved_jobs[j][0] and applied_jobs[i][1] == saved_jobs[j][1] and applied_jobs[i][2] == saved_jobs[j][2]:
+                pass
+                #print(applied_jobs[i][0], saved_jobs[j][0])
+                #print(applied_jobs[i][1], saved_jobs[j][1])
+                #print(applied_jobs[i][2], saved_jobs[j][2])
+                #saved_jobs[j][4] = "Y"
+                #print(saved_jobs[j][0]+" + " +saved_jobs[j][1] +" + " +saved_jobs[j][2])
+
+    return None
+
+def as_text(value):
+    if value is None:
+        return ""
+    return str(value)
+def create_workbook(filename):
+    if os.path.exists(filename):
+        defs.workbook = load_workbook(filename)
+    else:
+        defs.workbook = Workbook()
+def create_sheet(sheet_name):
+    defs.workbook.create_sheet(sheet_name)
+def insert_column(sheet_name, column, column_name, data):
+    column_label_index = column + str(1)
+    defs.workbook[sheet_name][column_label_index] = column_name
+    for i in range(2, len(data)):
+        index = column + str(i)
+        defs.workbook[sheet_name][index] = data[i]
+def autofit_cells(sheet_name):#  autofit columns to data size
+    for column_cells in defs.workbook[sheet_name].columns:
+        length = max(len(as_text(cell.value)) for cell in column_cells)
+        defs.workbook[sheet_name].column_dimensions[column_cells[0].column_letter].width = length
+def save(filename):
+        defs.workbook.save(filename)
 def main():
     if len(sys.argv) != 5:
         print("error")
@@ -141,48 +196,21 @@ def main():
     defs.logged_in  = login(browser_name, url, usr, pw)
     go_to_my_jobs()
     saved_jobs = get_saved_jobs()
-    print(saved_jobs)
-    print("===========================================================")
-    applied_jobs = get_applied_jobs();
-    print(applied_jobs)
+    #applied_jobs = get_applied_jobs();
+    #report = generate_final_report(saved_jobs, applied_jobs)
+    filename = "job_search_data.xlsx"
+    sheetname = datetime.datetime.now().strftime("%Y-%m-%d %H,%M,%S")
+    create_workbook(filename)
+    create_sheet(sheetname)
+    insert_column(sheetname,"A", 'positions', saved_jobs['positions'])
+    insert_column(sheetname,"B", 'companies', saved_jobs['companies'])
+    insert_column(sheetname,"C", 'job locations', saved_jobs['job locations'])
+    insert_column(sheetname,"D", 'days old/current # of applicants', saved_jobs['days old/current # of applicants'])
+    insert_column(sheetname,"E", 'date application sent', saved_jobs['date application sent'])
+    insert_column(sheetname,"F", 'result', saved_jobs['result'])
+    insert_column(sheetname,"G", 'date received', saved_jobs['date received'])
+    autofit_cells(sheetname)
+    save(filename)
 
-    '''
-    # check which jobs were applied to
-    for ajob in applied_jobs:
-        string = ajob[0] + ajob[1] +ajob[2]
-        for sjob in saved_jobs:
-            if string == str(sjob[0] + sjob[1] + sjob[2]):
-                print("job applied: ", ajob[0])
-    '''
-    create_excel_workbook("job_search_data.xlsx", saved_jobs)
-    #defs.csv_writer = csv.writer(open("job_data.csv", 'w'))
-    #defs.csv_writer.writerows(saved_jobs)
-def create_excel_workbook(sheetname, data):
-    workbook = Workbook()
-    worksheet = workbook.active
-    for i in range(0,len(data)):
-        for j in range(0, len(data[0])):
-            sheetidx = i + 1
-            sheetidy = j + 1
-            cell = worksheet.cell(sheetidx, sheetidy)
-            cell.value = data[i][j]
-    '''
-    max_col = [0]* len(saved_jobs)
-    for i in range(0,len(saved_jobs)):
-        for j in range(0, len(saved_jobs[0])):
-            if max_col[i] < len(saved_jobs[j]):
-                max_col[i] = len(saved_jobs[j])
-    '''
-    # make columns length of max field
-    for column_cells in worksheet.columns:
-        length = max(len(as_text(cell.value)) for cell in column_cells)
-        print(length)
-        worksheet.column_dimensions[column_cells[0].column_letter].width = length
-    workbook.save(filename="job_search_data.xlsx")
-
-def as_text(value):
-    if value is None:
-        return ""
-    return str(value)
 if __name__ == '__main__':
     main()
